@@ -1,42 +1,78 @@
-import type { Action, ThunkAction } from "@reduxjs/toolkit"
-import { combineSlices, configureStore } from "@reduxjs/toolkit"
-import { setupListeners } from "@reduxjs/toolkit/query"
-import { counterSlice } from "../features/counter/counterSlice"
-import { quotesApiSlice } from "../features/quotes/quotesApiSlice"
-
-// `combineSlices` automatically combines the reducers using
-// their `reducerPath`s, therefore we no longer need to call `combineReducers`.
-const rootReducer = combineSlices(counterSlice, quotesApiSlice)
-// Infer the `RootState` type from the root reducer
-export type RootState = ReturnType<typeof rootReducer>
-
-// The store setup is wrapped in `makeStore` to allow reuse
-// when setting up tests that need the same store config
-export const makeStore = (preloadedState?: Partial<RootState>) => {
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import { combineReducers, configureStore } from "@reduxjs/toolkit"
+import createSagaMiddleware from "redux-saga"
+import { all, call } from "redux-saga/effects"
+import { authSaga } from "./sagas/authSaga"
+import { userSaga } from "./sagas/userSaga"
+import { itemSaga } from "./sagas/itemSaga"
+import { editSaga } from "./sagas/editSaga"
+import { excelSaga } from "./sagas/excelSaga"
+import { orderSaga } from "./sagas/orderSaga"
+import { currencySaga } from "./sagas/currencySaga"
+import { chatSaga } from "./sagas/chatSaga"
+import authSlice from "./slices/authSlice"
+import { userActions } from "./slices/userSlice"
+import itemSlice from "./slices/itemSlice"
+import editSlice from "./slices/editSlice"
+import formSlice from "./slices/formSlice"
+import excelSlice from "./slices/excelSlice"
+import searchSlice from "./slices/searchSlice"
+import pageSlice from "./slices/pageSlice"
+import orderSlice from "./slices/orderSlice"
+import relateSlice from "./slices/relationSlice"
+import currencySlice from "./slices/currencySlice"
+import userSlice from "./slices/userSlice"
+import chatSlice, { chatActions } from "./slices/chatSlice"
+const reducers = combineReducers({
+  auth: authSlice,
+  user: userSlice,
+  item: itemSlice,
+  edit: editSlice,
+  form: formSlice,
+  excel: excelSlice,
+  search: searchSlice,
+  page: pageSlice,
+  order: orderSlice,
+  relate: relateSlice,
+  currency: currencySlice,
+  chat: chatSlice,
+})
+function* rootSaga() {
+  yield all([
+    call(authSaga),
+    call(itemSaga),
+    call(editSaga),
+    call(excelSaga),
+    call(orderSaga),
+    call(currencySaga),
+    call(userSaga),
+    call(chatSaga),
+  ])
+}
+const sagaMiddleware = createSagaMiddleware()
+const getUser = () => {
+  try {
+    const user = localStorage.getItem("user")
+    if (!user) return
+    store.dispatch(userActions.check())
+    store.dispatch(chatActions.getChats())
+  } catch (e) {
+    console.log("local storage is not working")
+  }
+}
+const createStore = () => {
   const store = configureStore({
-    reducer: rootReducer,
-    // Adding the api middleware enables caching, invalidation, polling,
-    // and other useful features of `rtk-query`.
-    middleware: getDefaultMiddleware => {
-      return getDefaultMiddleware().concat(quotesApiSlice.middleware)
-    },
-    preloadedState,
+    reducer: reducers,
+    middleware: getDefaultMiddleware =>
+      getDefaultMiddleware({ serializableCheck: false }).concat(sagaMiddleware),
   })
-  // configure listeners using the provided defaults
-  // optional, but required for `refetchOnFocus`/`refetchOnReconnect` behaviors
-  setupListeners(store.dispatch)
+  sagaMiddleware.run(rootSaga)
   return store
 }
-
-export const store = makeStore()
-
-// Infer the type of `store`
-export type AppStore = typeof store
-// Infer the `AppDispatch` type from the store itself
-export type AppDispatch = AppStore["dispatch"]
-export type AppThunk<ThunkReturnType = void> = ThunkAction<
-  ThunkReturnType,
-  RootState,
-  unknown,
-  Action
->
+const store = createStore()
+getUser()
+export default store
+export type RootState = ReturnType<typeof store.getState>
