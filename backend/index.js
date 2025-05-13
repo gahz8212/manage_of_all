@@ -1,0 +1,11 @@
+require("dotenv").config()
+const express = require("express")
+const { createServer } = require("http")
+const { Server } = require("socket.io")
+const app = express()
+app.set("port", process.env.PORT || 3000)
+const httpServer = createServer("app")
+const io = new Server(httpServer, { cors: { origin: "" } })
+httpServer.listen(app.get("port"), () => {
+  console.log(`${app.get("port")}번 포트에서 서버 대기 중`)
+})
